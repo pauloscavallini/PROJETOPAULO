@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adicionar Novo Livro</title>
+    <title>Login de Usuário</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
@@ -11,12 +11,12 @@
         <h1>Biblioteca</h1>
         <nav>
             <a href="{{ url_for('index') }}">Home</a>
-            <a href="{{ url_for('novo') }}">Adicionar Livro</a>
+            <a href="{{ url_for('cadastro') }}">Cadastrar</a>
         </nav>
     </header>
     <main>
         <div class="form-container">
-            <h2>Adicionar Novo Livro</h2>
+            <h2>Login de Usuário</h2>
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     <div class="flash-messages">
@@ -26,18 +26,15 @@
                     </div>
                 {% endif %}
             {% endwith %}
-            <form action="{{ url_for('criar') }}" method="post">
-                <label for="titulo">Título:</label>
-                <input type="text" id="titulo" name="titulo" required>
+            <form action="{{ url_for('fazer_login') }}" method="post">
+                <label for="email">Email:</label>
+                <input type="text" id="email" name="email" required>
 
-                <label for="autor">Autor:</label>
-                <input type="text" id="autor" name="autor" required>
-
-                <label for="ano_publicacao">Ano de Publicação:</label>
-                <input type="text" id="ano_publicacao" name="ano_publicacao" required>
+                <label for="senha">Senha:</label>
+                <input type="password" id="senha" name="senha" required>
 
                 <div class="form-actions">
-                    <button type="submit">Salvar</button>
+                    <button type="submit">Entrar</button>
                     <a href="{{ url_for('index') }}" class="cancelar">Cancelar</a>
                 </div>
             </form>

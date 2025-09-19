@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adicionar Novo Livro</title>
+    <title>Editar Livro</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
@@ -16,7 +16,7 @@
     </header>
     <main>
         <div class="form-container">
-            <h2>Adicionar Novo Livro</h2>
+            <h2>Editar Livro</h2>
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     <div class="flash-messages">
@@ -26,19 +26,19 @@
                     </div>
                 {% endif %}
             {% endwith %}
-            <form action="{{ url_for('criar') }}" method="post">
-                <label for="titulo">Título:</label>
-                <input type="text" id="titulo" name="titulo" required>
+            <form action="{{ url_for('editar_usuario', id=usuario[0]) }}" method="POST">
+                <label for="nome">Nome:</label>
+                <input type="text" id="nome" name="nome" value="{{ usuario[1] }}" required>
 
-                <label for="autor">Autor:</label>
-                <input type="text" id="autor" name="autor" required>
+                <label for="email">Email:</label>
+                <input type="text" id="email" name="email" value="{{ usuario[2] }}" required>
 
-                <label for="ano_publicacao">Ano de Publicação:</label>
-                <input type="text" id="ano_publicacao" name="ano_publicacao" required>
+                <label for="senha">Ano de Publicação:</label>
+                <input type="text" id="senha" name="senha" value="{{ usuario[3] }}" required>
 
                 <div class="form-actions">
                     <button type="submit">Salvar</button>
-                    <a href="{{ url_for('index') }}" class="cancelar">Cancelar</a>
+                    <a href="{{ url_for('index') }}" class="cancelar">Cancelar</a> 
                 </div>
             </form>
         </div>

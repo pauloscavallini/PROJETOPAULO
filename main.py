@@ -1,5 +1,6 @@
-from flask import Flask, render_template, redirect, request, flash, url_for
+from flask import Flask, render_template, redirect, request, flash, url_for, session
 import fdb
+from flask_bcrypt import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = 'Brabo'
@@ -14,13 +15,16 @@ con = fdb.connect(host=host, user=user, password=password, database=database)
 @app.route('/')
 def index():
     cursor = con.cursor()
-    cursor.execute("SELECT * FROM LIVRO")
-    livros = cursor.fetchall()
+    cursor.execute("SELECT * FROM USUARIO")
+    usuarios = cursor.fetchall()
     cursor.close()
-    return render_template('livros.html', livros=livros)
+    return render_template('index.html', usuarios=usuarios)
 
 @app.route('/novo')
 def novo():
+    if "id_usuario" not in session:
+        flash('Você precisa estar logado para criar um livro.', 'error')
+        return redirect(url_for('index'))
     return render_template('novo.html', titulo='Novo livro')
 
 @app.route('/criar', methods=['POST'])
@@ -34,7 +38,7 @@ def criar():
     try:
         cursor.execute("SELECT 1 FROM livro WHERE titulo = ?", (titulo,))
         if cursor.fetchone():
-            flash('Erro: Livro já cadastrado')
+            flash('Livro já cadastrado', 'error')
             return redirect(url_for('novo'))
 
         cursor.execute('''INSERT INTO livro (titulo, autor, ano_publicacao)
@@ -42,8 +46,8 @@ def criar():
         con.commit()
     finally:
         cursor.close()
-    flash("Livro cadastrado com sucesso!")
-    return redirect(url_for('index'))
+    flash("Livro cadastrado com sucesso!", 'success')
+    return redirect(url_for('acervo'))
 
 
 @app.route('/atualizar')
@@ -58,8 +62,8 @@ def editar(id):
 
     if not livro:
         cursor.close()
-        flash("Livro não encontrado")
-        return redirect(url_for('index'))
+        flash("Livro não encontrado", 'error')
+        return redirect(url_for('acervo'))
 
     if request.method == 'POST':
         titulo = request.form['titulo']
@@ -70,8 +74,8 @@ def editar(id):
                        (titulo, autor, ano_publicacao, id))
 
         con.commit()
-        flash("Livro atualizado com sucesso")
-        return redirect(url_for('index'))
+        flash("Livro atualizado com sucesso", 'success')
+        return redirect(url_for('acervo'))
 
     cursor.close()
     return render_template('editar.html', livro=livro, titulo='Editar livro')
@@ -88,7 +92,124 @@ def deletar(id):
         flash('Erro ao excluir o livro.', 'error')  # Mensagem de erro
     finally:
         cursor.close()  # Fecha o cursor independentemente do resultado
-    return redirect(url_for('index'))  # Redireciona para a página principal
+    return redirect(url_for('acervo'))  # Redireciona para a página principal
+
+@app.route('/deletar_usuario/<int:id>', methods=['POST'])
+def deletar_usuario(id):
+    cursor = con.cursor()
+    try:
+        cursor.execute('DELETE FROM usuario WHERE id_usuario = ?', (id,))
+        con.commit()
+        flash('Usuário excluído com sucesso!', 'success')
+    except Exception as e:
+        con.rollback()
+        flash('Erro ao excluir usuário.', 'error')
+    finally:
+        cursor.close()
+    return redirect(url_for('index'))
+
+@app.route('/editar_usuario/<int:id>', methods=['GET', 'POST'])
+def editar_usuario(id):
+    cursor = con.cursor()
+    cursor.execute("SELECT * FROM usuario WHERE id_usuario = ?", (id,))
+    usuario = cursor.fetchone()
+
+    if not usuario:
+        cursor.close()
+        flash("Usuário não encontrado.", 'error')
+        return redirect(url_for('index'))
+    
+    if request.method == "POST":
+        nome = request.form['nome']
+        email = request.form['email']
+        senha = request.form['senha']
+
+        cursor.execute("UPDATE usuario SET nome = ?, email = ?, senha = ? WHERE id_usuario = ?",
+                       (nome, email, senha, id))
+        
+        con.commit()
+        flash("Usuário atualizado com sucesso!", 'sucesso')
+        return redirect(url_for('index'))
+    
+    cursor.close()
+    return render_template('editar_usuario.html', usuario=usuario, titulo='Editar usuário')
+
+@app.route('/acervo')
+def acervo():
+    if "id_usuario" not in session:
+        flash('Você precisa estar logado para acessar o acervo.', 'error')
+        return redirect(url_for('login'))
+    cursor = con.cursor()
+    cursor.execute("SELECT * FROM LIVRO")
+    livros = cursor.fetchall()
+    cursor.close()
+    return render_template('acervo.html', livros=livros)
+
+# no form da página de cadastro
+@app.route('/cadastro')
+def cadastro():
+    return render_template('cadastro.html')
+
+# usuario
+@app.route('/cadastrar_usuario', methods=['POST'])
+def cadastrar_usuario():
+    nome = request.form['nome']
+    email = request.form['email']
+    senha = request.form['senha']
+    cursor = con.cursor()
+
+    try:
+        cursor.execute("SELECT * FROM usuario WHERE email = ?", (email,))
+        if cursor.fetchone():
+            flash("Usuário já cadastrado!", 'error')
+            return redirect(url_for('cadastro.html')) # para o código e dá feedback
+
+        cursor.execute('''INSERT INTO usuario (nome, email, senha)
+                                      VALUES (?, ?, ?)''', (nome, email, generate_password_hash(senha).decode('utf-8')))
+        con.commit()
+
+        flash("Usuário criado com sucesso!",'success')
+        return redirect(url_for('login'))
+    except Exception as e:
+        flash("Erro ao criar usuário!", 'error')
+        return redirect(url_for('cadastrar_usuario'))
+    finally:
+        cursor.close()
+
+# login
+@app.route('/login')
+def login():
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop("id_usuario", None)
+    flash('Logout feito com sucesso!', 'success')
+    return redirect(url_for('index'))
+
+@app.route('/fazer_login/', methods=['POST'])
+def fazer_login():
+    email = request.form['email']
+    senha = request.form['senha']
+    cursor = con.cursor()
+
+    try:
+        cursor.execute("SELECT id_usuario, nome, email, senha FROM usuario WHERE email = ?", (email,))
+        usuario = cursor.fetchone()
+
+        if not usuario:
+            flash("Usuário não existe", "error")
+            return redirect(url_for('login'))
+
+        if check_password_hash(usuario[3], senha):
+            session["id_usuario"] = usuario[0]
+            flash("Login feito com sucesso!", "success")
+            return redirect(url_for('acervo'))
+
+        flash("Email ou senha incorretos", "error")
+    finally:
+        cursor.close()
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
     app.run(debug=True)
