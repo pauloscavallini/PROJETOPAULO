@@ -13,6 +13,7 @@
             <a href="{{ url_for('index') }}">Home</a>
             <a href="{{ url_for('novo') }}">Adicionar Livro</a>
             <a href="{{ url_for('cadastro') }}">Adicionar Usuário</a>
+            <a href="{{ url_for('acervo') }}">Acervo</a>
             {% if "id_usuario" in session %}
                 <a href="{{ url_for('logout') }}">Logout</a>
             {% else %}
